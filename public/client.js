@@ -131,7 +131,7 @@ function getPhaseText(me) {
   if (!room) return "";
   if (room.state === "lobby") return `Comparte el codigo ${room.code}. Minimo 2 jugadores.`;
   if (room.state === "countdown") return "Preparate para el saque inicial.";
-  if (room.state === "playing") return `${me?.power ? `Power-up: ${me.power}. ` : ""}Empuja, roba y dispara.`;
+  if (room.state === "playing") return `${me?.power ? `Estrella: ${me.powerLabel} ${me.powerRemaining}s. ` : ""}Empuja, roba y dispara.`;
   if (room.state === "finished") return winnerText();
   return "Celebracion rapida y seguimos.";
 }
@@ -166,6 +166,25 @@ function drawField(field) {
 }
 
 function drawPlayer(player) {
+  if (player.power) {
+    const pulse = 30 + Math.sin(performance.now() / 120) * 7;
+    ctx.fillStyle = powerColor(player.power, 0.22);
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = powerColor(player.power, 0.8);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, pulse + 5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  if (player.frozen > 0) {
+    ctx.strokeStyle = "rgba(38,217,255,.85)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 32, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   const grad = ctx.createRadialGradient(player.x - 8, player.y - 10, 4, player.x, player.y, 30);
   grad.addColorStop(0, "#ffffff");
   grad.addColorStop(0.22, player.color);
@@ -185,6 +204,11 @@ function drawPlayer(player) {
   ctx.font = "700 15px Trebuchet MS";
   ctx.textAlign = "center";
   ctx.fillText(player.name, player.x, player.y + 44);
+  if (player.power) {
+    ctx.fillStyle = powerColor(player.power, 1);
+    ctx.font = "900 13px Trebuchet MS";
+    ctx.fillText(`${player.powerLabel} ${player.powerRemaining}s`, player.x, player.y - 54);
+  }
 }
 
 function drawBall(ball) {
@@ -203,17 +227,35 @@ function drawBall(ball) {
 function drawPowerup(powerup) {
   ctx.save();
   ctx.translate(powerup.x, powerup.y);
-  ctx.rotate(performance.now() / 500);
-  ctx.fillStyle = powerup.type === "cannon" ? "#ffe45e" : powerup.type === "freeze" ? "#26d9ff" : "#ff8a3d";
+  ctx.rotate(performance.now() / 420);
+  ctx.shadowColor = powerColor(powerup.type, 1);
+  ctx.shadowBlur = 22;
+  ctx.fillStyle = powerColor(powerup.type, 1);
   ctx.beginPath();
-  for (let i = 0; i < 8; i += 1) {
-    const r = i % 2 ? 11 : 20;
-    const a = (Math.PI * 2 * i) / 8;
+  for (let i = 0; i < 10; i += 1) {
+    const r = i % 2 ? 9 : 22;
+    const a = (Math.PI * 2 * i) / 10 - Math.PI / 2;
     ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
   }
   ctx.closePath();
   ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.rotate(-performance.now() / 420);
+  ctx.fillStyle = "#06120d";
+  ctx.font = "900 10px Trebuchet MS";
+  ctx.textAlign = "center";
+  ctx.fillText(powerup.label?.slice(0, 2).toUpperCase() ?? "★", 0, 4);
   ctx.restore();
+}
+
+function powerColor(type, alpha = 1) {
+  const colors = {
+    turbo: `rgba(255,138,61,${alpha})`,
+    cannon: `rgba(255,228,94,${alpha})`,
+    freeze: `rgba(38,217,255,${alpha})`,
+    magnet: `rgba(215,134,255,${alpha})`
+  };
+  return colors[type] ?? `rgba(248,255,232,${alpha})`;
 }
 
 function render() {

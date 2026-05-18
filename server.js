@@ -14,6 +14,12 @@ const BALL_RADIUS = 15;
 const MATCH_SECONDS = 90;
 const ROOM_TTL_MS = 1000 * 60 * 30;
 const COLORS = ["#ff345d", "#26d9ff", "#ffd166", "#8cff66", "#d786ff", "#ff8a3d"];
+const POWERUPS = {
+  turbo: { label: "Turbo", duration: 5 },
+  cannon: { label: "Tiro canon", duration: 7 },
+  freeze: { label: "Congelar", duration: 0 },
+  magnet: { label: "Iman", duration: 5 }
+};
 
 const app = express();
 app.use(express.static(join(__dirname, "public")));
@@ -82,6 +88,7 @@ function addPlayer(room, socket, name) {
     goals: 0,
     saves: 0,
     power: null,
+    powerUntil: 0,
     frozen: 0
   };
   Object.assign(player, spawnFor(player));
@@ -93,7 +100,8 @@ function addPlayer(room, socket, name) {
 }
 
 function resetKickoff(room, scoringTeam = null) {
-  room.ball = { x: FIELD.width / 2, y: FIELD.height / 2, vx: scoringTeam === "red" ? -220 : 220, vy: 0, owner: null };
+  const kickoffVelocity = scoringTeam === "red" ? -180 : scoringTeam === "blue" ? 180 : 0;
+  room.ball = { x: FIELD.width / 2, y: FIELD.height / 2, vx: kickoffVelocity, vy: 0, owner: null };
   for (const player of room.players.values()) {
     Object.assign(player, spawnFor(player), { vx: 0, vy: 0, frozen: 0 });
   }
@@ -123,6 +131,8 @@ function serializeRoom(room) {
       stamina: p.stamina,
       goals: p.goals,
       power: p.power,
+      powerLabel: p.power ? POWERUPS[p.power]?.label ?? p.power : null,
+      powerRemaining: p.power ? Math.max(0, Math.ceil((p.powerUntil - now()) / 1000)) : 0,
       frozen: p.frozen
     }))
   };
@@ -147,6 +157,7 @@ function startRoom(room) {
   for (const player of room.players.values()) {
     player.goals = 0;
     player.power = null;
+    player.powerUntil = 0;
     player.stamina = 1;
   }
   resetKickoff(room);
@@ -154,16 +165,26 @@ function startRoom(room) {
 
 function spawnPowerup(room) {
   if (room.powerups.length >= 3) return;
-  const types = ["turbo", "cannon", "freeze", "magnet"];
+  const types = Object.keys(POWERUPS);
   room.powerups.push({
     id: crypto.randomUUID(),
     type: types[Math.floor(Math.random() * types.length)],
+    label: null,
     x: FIELD.width * (0.25 + Math.random() * 0.5),
     y: FIELD.height * (0.18 + Math.random() * 0.64)
   });
+  room.powerups.at(-1).label = POWERUPS[room.powerups.at(-1).type].label;
+}
+
+function clearExpiredPower(player) {
+  if (player.power && player.powerUntil && now() >= player.powerUntil) {
+    player.power = null;
+    player.powerUntil = 0;
+  }
 }
 
 function updatePlayer(player) {
+  clearExpiredPower(player);
   if (player.frozen > 0) {
     player.frozen = Math.max(0, player.frozen - DT);
     player.vx *= 0.82;
@@ -223,6 +244,13 @@ function collidePlayers(room) {
 function updateBall(room) {
   const ball = room.ball;
   for (const player of room.players.values()) {
+    if (player.power !== "magnet") continue;
+    const d = distance(player, ball);
+    if (d > 210 || d < PLAYER_RADIUS + BALL_RADIUS) continue;
+    ball.vx += ((player.x - ball.x) / d) * 430 * DT;
+    ball.vy += ((player.y - ball.y) / d) * 430 * DT;
+  }
+  for (const player of room.players.values()) {
     const d = distance(player, ball);
     const touch = PLAYER_RADIUS + BALL_RADIUS;
     if (d > touch) continue;
@@ -235,6 +263,7 @@ function updateBall(room) {
     ball.vy = player.vy * 0.78 + ny * shootBoost;
     ball.owner = player.id;
     if (player.power === "cannon" && player.input.shoot) player.power = null;
+    if (player.power === "cannon" && player.input.shoot) player.powerUntil = 0;
   }
   ball.x += ball.vx * DT;
   ball.y += ball.vy * DT;
@@ -243,8 +272,9 @@ function updateBall(room) {
 
   const goalTop = FIELD.height / 2 - FIELD.goalWidth / 2;
   const goalBottom = FIELD.height / 2 + FIELD.goalWidth / 2;
-  if (ball.x < -BALL_RADIUS && ball.y > goalTop && ball.y < goalBottom) return scoreGoal(room, "blue");
-  if (ball.x > FIELD.width + BALL_RADIUS && ball.y > goalTop && ball.y < goalBottom) return scoreGoal(room, "red");
+  const isInsideGoalMouth = ball.y > goalTop + BALL_RADIUS && ball.y < goalBottom - BALL_RADIUS;
+  if (isInsideGoalMouth && ball.x <= FIELD.goalDepth + BALL_RADIUS) return scoreGoal(room, "blue");
+  if (isInsideGoalMouth && ball.x >= FIELD.width - FIELD.goalDepth - BALL_RADIUS) return scoreGoal(room, "red");
 
   if (ball.x < BALL_RADIUS || ball.x > FIELD.width - BALL_RADIUS) {
     ball.x = clamp(ball.x, BALL_RADIUS, FIELD.width - BALL_RADIUS);
@@ -264,6 +294,7 @@ function scoreGoal(room, team) {
   room.goalFlash = { team, text: `GOL ${team === "red" ? "ROJO" : "AZUL"}!`, until: now() + 1700 };
   room.state = "goal";
   room.countdown = 1.7;
+  room.powerups = [];
   resetKickoff(room, team);
 }
 
@@ -277,11 +308,13 @@ function updatePowerups(room) {
     if (index === -1) continue;
     const [powerup] = room.powerups.splice(index, 1);
     player.power = powerup.type;
+    player.powerUntil = POWERUPS[powerup.type].duration ? now() + POWERUPS[powerup.type].duration * 1000 : 0;
     if (powerup.type === "freeze") {
       for (const rival of room.players.values()) {
         if (rival.team !== player.team) rival.frozen = 1.25;
       }
       player.power = null;
+      player.powerUntil = 0;
     }
   }
 }
