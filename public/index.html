@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Derbi Relampago, futbol arcade multijugador online." />
+    <title>Derbi Relampago</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero" id="menu">
+        <div class="badge">Multijugador online</div>
+        <h1>Derbi<br />Relampago</h1>
+        <p>Futbol arcade rapido: salas privadas, choques brutales, tiros canon y goles en 90 segundos.</p>
+        <div class="panel form-panel">
+          <label>
+            Tu nombre
+            <input id="playerName" maxlength="16" placeholder="Crack local" autocomplete="nickname" />
+          </label>
+          <div class="actions">
+            <button id="createRoom">Crear sala</button>
+            <input id="roomCode" maxlength="5" placeholder="CODIGO" />
+            <button id="joinRoom" class="secondary">Unirse</button>
+          </div>
+          <details>
+            <summary>Servidor</summary>
+            <input id="serverUrl" placeholder="wss://derbi-relampago-server.onrender.com" />
+          </details>
+          <p class="hint" id="status">Conecta con amigos y comparte el codigo de sala.</p>
+        </div>
+      </section>
+
+      <section class="game hidden" id="game">
+        <div class="scorebar">
+          <div class="team red"><span>ROJO</span><strong id="redScore">0</strong></div>
+          <div class="timer"><span id="roomLabel">Sala -----</span><strong id="timer">90</strong></div>
+          <div class="team blue"><strong id="blueScore">0</strong><span>AZUL</span></div>
+        </div>
+        <canvas id="field" width="1200" height="720" aria-label="Campo de juego"></canvas>
+        <div class="overlay" id="overlay"></div>
+        <div class="bottom">
+          <div class="panel lobby">
+            <h2 id="phaseTitle">Lobby</h2>
+            <p id="phaseText">Esperando jugadores...</p>
+            <button id="startMatch" class="kickoff hidden">Iniciar partido</button>
+          </div>
+          <div class="panel roster" id="roster"></div>
+          <div class="panel controls">
+            <strong>Controles</strong>
+            <span>WASD o flechas: moverse</span>
+            <span>Espacio: tiro</span>
+            <span>Shift: sprint</span>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="./client.js" type="module"></script>
+  </body>
+</html>
