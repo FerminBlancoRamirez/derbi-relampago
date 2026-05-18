@@ -24,6 +24,7 @@ let socket = null;
 let playerId = null;
 let room = null;
 let lastInput = "";
+let currentServerUrl = "";
 
 function resolveServerUrl() {
   const params = new URLSearchParams(location.search);
@@ -39,13 +40,14 @@ function connect() {
   return new Promise((resolve, reject) => {
     if (socket?.readyState === WebSocket.OPEN) return resolve(socket);
     const url = resolveServerUrl();
+    currentServerUrl = url;
     serverUrlInput.value = url;
     localStorage.setItem("derbiServer", url);
     socket = new WebSocket(url);
     socket.addEventListener("open", () => resolve(socket), { once: true });
-    socket.addEventListener("error", () => reject(new Error("No se pudo conectar al servidor")), { once: true });
+    socket.addEventListener("error", () => reject(new Error(`No se pudo conectar a ${url}`)), { once: true });
     socket.addEventListener("message", handleMessage);
-    socket.addEventListener("close", () => setStatus("Conexion cerrada. Revisa el servidor de Render."));
+    socket.addEventListener("close", () => setStatus(`Conexion cerrada con ${currentServerUrl}. Revisa que Render este desplegado como Web Service y usa su URL wss://...`));
   });
 }
 
