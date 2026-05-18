@@ -21,27 +21,27 @@ Abre `http://localhost:3000` en dos ventanas o dispositivos de la misma red.
 
 ### Render
 
-El backend esta preparado con `render.yaml` como Web Service llamado `derbi-relampago-server`.
+El backend esta preparado con `render.yaml` como Web Service en Render.
 
 [Desplegar backend en Render](https://dashboard.render.com/blueprint/new?repo=https://github.com/FerminBlancoRamirez/derbi-relampago)
 
 La URL esperada del servidor es:
 
 ```text
-https://derbi-relampago-server.onrender.com
+https://derbi-relampago.onrender.com
 ```
 
 El WebSocket publico sera:
 
 ```text
-wss://derbi-relampago-server.onrender.com
+wss://derbi-relampago.onrender.com
 ```
 
 ### GitHub Pages
 
 El repo incluye `.github/workflows/pages.yml` para publicar automaticamente la carpeta `public/` en GitHub Pages cuando haya push a `main`.
 
-En GitHub, configura Pages con la fuente `GitHub Actions`. El cliente usa por defecto `wss://derbi-relampago-server.onrender.com` cuando no esta en localhost.
+En GitHub, configura Pages con la fuente `GitHub Actions`. El cliente usa por defecto `wss://derbi-relampago.onrender.com` cuando no esta en localhost.
 
 Si Render genera otra URL, abre el juego con:
 

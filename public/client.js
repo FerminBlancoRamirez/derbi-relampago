@@ -18,7 +18,7 @@ const roomLabel = document.querySelector("#roomLabel");
 const phaseTitle = document.querySelector("#phaseTitle");
 const phaseText = document.querySelector("#phaseText");
 
-const DEFAULT_RENDER_WS = "wss://derbi-relampago-server.onrender.com";
+const DEFAULT_RENDER_WS = "wss://derbi-relampago.onrender.com";
 const keys = new Set();
 let socket = null;
 let playerId = null;
